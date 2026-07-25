@@ -32,9 +32,11 @@ static void IRAM_ATTR ppmISR() {
         }
         _chIdx = 0;
     } else if (dt >= PPM_MIN_US && dt <= PPM_MAX_US) {
-        // Valid channel period
-        if (_chIdx < PPM_MAX_CHANNELS) {
-            _channels[_chIdx++] = (uint16_t)dt;
+        // Valid channel period — read/write volatile idx separately
+        uint8_t idx = _chIdx;
+        if (idx < PPM_MAX_CHANNELS) {
+            _channels[idx] = (uint16_t)dt;
+            _chIdx = idx + 1;
         }
     }
     // Pulses shorter than PPM_MIN_US are the short sync pulses (≈0.3 ms); ignore

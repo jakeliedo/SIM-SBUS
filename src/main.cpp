@@ -30,11 +30,12 @@ static const uint8_t PWM_PINS[PWM_CHANNELS] = {
 };
 
 // =============================================================
-// Map RC pulse (µs) → signed HID axis (-32767 … +32767)
+// Map RC pulse (µs) → signed HID axis (-127 … +127, int8_t)
+// USBHIDGamepad on this Arduino-ESP32 build uses int8_t axes.
 // =============================================================
-static int16_t rcToAxis(uint16_t us) {
-    int32_t v = ((int32_t)us - RC_MID_US) * HID_AXIS_MAX / 500;
-    return (int16_t)constrain(v, (int32_t)HID_AXIS_MIN, (int32_t)HID_AXIS_MAX);
+static int8_t rcToAxis(uint16_t us) {
+    int32_t v = ((int32_t)us - RC_MID_US) * 127 / 500;
+    return (int8_t)constrain(v, -127, 127);
 }
 
 // =============================================================
@@ -134,16 +135,16 @@ void loop() {
     if (now - lastHidMs >= 10) {
         lastHidMs = now;
 
-        hid_gamepad_report_t report = {};
-        report.x       = rcToAxis(ch[0]);   // CH1 — Aileron
-        report.y       = rcToAxis(ch[1]);   // CH2 — Elevator
-        report.z       = rcToAxis(ch[2]);   // CH3 — Throttle
-        report.rz      = rcToAxis(ch[3]);   // CH4 — Rudder
-        report.rx      = rcToAxis(ch[4]);   // CH5 — AUX1
-        report.ry      = rcToAxis(ch[5]);   // CH6 — AUX2
-        report.hat     = GAMEPAD_HAT_CENTERED;
-        report.buttons = 0;
-
-        Gamepad.send(&report);
+        // send(x, y, z, rz, rx, ry, hat, buttons)
+        Gamepad.send(
+            rcToAxis(ch[0]),  // CH1 — Aileron
+            rcToAxis(ch[1]),  // CH2 — Elevator
+            rcToAxis(ch[2]),  // CH3 — Throttle
+            rcToAxis(ch[3]),  // CH4 — Rudder
+            rcToAxis(ch[4]),  // CH5 — AUX1
+            rcToAxis(ch[5]),  // CH6 — AUX2
+            0,                // hat — centered
+            0                 // buttons
+        );
     }
 }
