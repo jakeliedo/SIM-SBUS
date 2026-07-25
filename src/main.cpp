@@ -98,7 +98,7 @@ void setup() {
 
     // USB HID device identity visible in Windows device manager
     USB.manufacturerName("SIM-SBUS");
-    USB.productName("RC HID Joystick 6-axis");
+    USB.productName("ESP32-Game Controller Dongle");
     Gamepad.begin();
     USB.begin();
 
