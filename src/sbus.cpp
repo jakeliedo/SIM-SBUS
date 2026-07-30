@@ -9,6 +9,7 @@ static uint8_t  _bufIdx       = 0;
 static uint16_t _rawCh[16];
 static bool     _failsafe     = false;
 static uint32_t _lastFrameMs  = 0;
+static uint32_t _frameStartUs = 0;   // micros() when current frame started
 
 void sbusBegin(uint8_t rxPin) {
     // 100 kbaud, 8 data bits, Even parity, 2 stop bits, signal INVERTED
@@ -22,8 +23,17 @@ bool sbusUpdate() {
     while (_sbusSerial.available()) {
         uint8_t b = (uint8_t)_sbusSerial.read();
 
+        // Intra-frame timeout: if >4 ms passed since frame started, the byte
+        // stream is corrupt or split across frames — reset and wait for fresh start.
+        // One full SBUS frame = 25 bytes × 100 µs = 2.5 ms; 4 ms gives margin.
+        if (_bufIdx > 0 && (micros() - _frameStartUs) > 4000) {
+            _bufIdx = 0;
+        }
+
         // Wait for start byte at index 0
         if (_bufIdx == 0 && b != SBUS_START_BYTE) continue;
+
+        if (_bufIdx == 0) _frameStartUs = micros();  // stamp start of new frame
 
         _buf[_bufIdx++] = b;
         if (_bufIdx < SBUS_FRAME_SIZE) continue;
